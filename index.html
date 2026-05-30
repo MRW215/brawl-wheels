@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brawl Stars 角色转盘</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 30%, #0d0d35 60%, #0a0a2e 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  .stars {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    background: radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 40% 10%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 85% 40%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 15% 60%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 30% 75%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 80% 65%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(1px 1px at 45% 85%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 90% 85%, rgba(255,255,255,0.4), transparent);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 700px; width: 100%;
+  }
+
+  .header {
+    text-align: center; margin-bottom: 20px;
+  }
+  .header h1 {
+    font-size: 2.2em; font-weight: 900;
+    background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 4px;
+  }
+  .header .subtitle {
+    color: #8899aa; font-size: 0.95em;
+  }
+
+  /* Stage indicator */
+  .stage-indicator {
+    display: flex; justify-content: center; gap: 12px; margin-bottom: 16px;
+  }
+  .stage-dot {
+    padding: 8px 20px; border-radius: 20px;
+    font-size: 0.9em; font-weight: 700;
+    background: rgba(255,255,255,0.08);
+    color: #556; transition: all 0.3s;
+  }
+  .stage-dot.active {
+    background: #ffd700; color: #1a1a2e;
+    box-shadow: 0 0 20px rgba(255,215,0,0.4);
+  }
+  .stage-dot.done {
+    background: rgba(255,215,0,0.2); color: #ffd700;
+  }
+
+  /* Wheel area */
+  .wheel-container {
+    position: relative;
+    display: flex; justify-content: center; align-items: center;
+    margin: 0 auto 20px;
+  }
+  .wheel-wrapper {
+    position: relative; display: inline-block;
+  }
+  .pointer {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 32px solid #ffd700;
+    z-index: 10;
+    filter: drop-shadow(0 2px 6px rgba(255,215,0,0.6));
+  }
+  canvas {
+    display: block;
+    filter: drop-shadow(0 0 30px rgba(100,100,255,0.3));
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .btn {
+    padding: 14px 40px; border: none; border-radius: 30px;
+    font-size: 1.1em; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: all 0.25s;
+    letter-spacing: 1px;
+  }
+  .btn:disabled {
+    opacity: 0.35; cursor: not-allowed; pointer-events: none;
+  }
+  .btn-spin {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    color: #1a1a2e; font-size: 1.2em; padding: 16px 60px;
+    box-shadow: 0 4px 20px rgba(255,215,0,0.35);
+  }
+  .btn-spin:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(255,215,0,0.5);
+  }
+  .btn-spin:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-reset {
+    background: rgba(255,255,255,0.1); color: #ccc;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-reset:hover:not(:disabled) {
+    background: rgba(255,255,255,0.18);
+  }
+
+  /* Result */
+  .result {
+    text-align: center; min-height: 60px;
+    margin-bottom: 12px; transition: all 0.3s;
+  }
+  .result-card {
+    display: inline-block;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 16px; padding: 16px 32px;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .result-rarity { font-size: 0.85em; color: #889; margin-bottom: 2px; }
+  .result-name   { font-size: 1.8em; font-weight: 900; }
+  .result-english { font-size: 0.85em; color: #889; }
+
+  /* History */
+  .history {
+    margin-top: 16px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .history h3 {
+    font-size: 0.9em; color: #667; margin-bottom: 8px;
+  }
+  .history-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .history-chip {
+    padding: 4px 12px; border-radius: 12px;
+    font-size: 0.8em; font-weight: 700;
+    background: rgba(255,255,255,0.08);
+  }
+
+  /* Responsive */
+  @media (max-width: 520px) {
+    .header h1 { font-size: 1.5em; }
+    .btn-spin { padding: 12px 40px; font-size: 1em; }
+    canvas { width: 340px !important; height: 340px !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<div class="container">
+  <div class="header">
+    <h1>Brawl Stars 角色转盘</h1>
+    <p class="subtitle">102 个角色 · 先抽稀有度，再抽角色</p>
+  </div>
+
+  <div class="stage-indicator">
+    <span class="stage-dot active" id="stage1Dot">① 抽取稀有度</span>
+    <span class="stage-dot" id="stage2Dot">② 抽取角色</span>
+  </div>
+
+  <div class="wheel-container">
+    <div class="wheel-wrapper">
+      <div class="pointer" id="pointer"></div>
+      <canvas id="wheel" width="560" height="560"></canvas>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-spin" id="btnSpin" onclick="spin()">🎰 旋转！</button>
+    <button class="btn btn-reset" id="btnReset" onclick="resetAll()">重新开始</button>
+  </div>
+
+  <div class="result" id="resultArea"></div>
+
+  <div class="history" id="historyArea" style="display:none">
+    <h3>📋 抽取记录</h3>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// BRAWLER DATA — edit here if the list is outdated
+// ============================================================
+const rarities = [
+  {
+    name: '起始角色', color: '#5b9bd5', count: 1,
+    brawlers: [
+      { cn: '雪莉', en: 'Shelly' },
+    ]
+  },
+  {
+    name: '稀有', color: '#68c968', count: 8,
+    brawlers: [
+      { cn: '柯尔特', en: 'Colt' },
+      { cn: '布洛克', en: 'Brock' },
+      { cn: '公牛', en: 'Bull' },
+      { cn: '艾尔·普里莫', en: 'El Primo' },
+      { cn: '巴利', en: 'Barley' },
+      { cn: '波克', en: 'Poco' },
+      { cn: '妮塔', en: 'Nita' },
+      { cn: '罗莎', en: 'Rosa' },
+    ]
+  },
+  {
+    name: '超稀有', color: '#4a90d9', count: 10,
+    brawlers: [
+      { cn: '瑞科', en: 'Rico' },
+      { cn: '达里尔', en: 'Darryl' },
+      { cn: '潘妮', en: 'Penny' },
+      { cn: '卡尔', en: 'Carl' },
+      { cn: '雅琪', en: 'Jacky' },
+      { cn: '格斯', en: 'Gus' },
+      { cn: '8比特', en: '8-BIT' },
+      { cn: '迪克', en: 'Tick' },
+      { cn: '爆破麦克', en: 'Dynamike' },
+      { cn: '杰西', en: 'Jessie' },
+    ]
+  },
+  {
+    name: '史诗', color: '#b146c2', count: 29,
+    brawlers: [
+      { cn: '阿渤', en: 'Bo' },
+      { cn: '艾魅', en: 'Emz' },
+      { cn: '斯图', en: 'Stu' },
+      { cn: '佩佩', en: 'Piper' },
+      { cn: '帕姆', en: 'Pam' },
+      { cn: '弗兰肯', en: 'Frank' },
+      { cn: '比比', en: 'Bibi' },
+      { cn: '贝亚', en: 'Bea' },
+      { cn: '纳妮', en: 'Nani' },
+      { cn: '艾德加', en: 'Edgar' },
+      { cn: '格里夫', en: 'Griff' },
+      { cn: '格罗姆', en: 'Grom' },
+      { cn: '邦妮', en: 'Bonnie' },
+      { cn: '格尔', en: 'Gale' },
+      { cn: '科莱特', en: 'Colette' },
+      { cn: '贝尔', en: 'Belle' },
+      { cn: '阿拾', en: 'Ash' },
+      { cn: '萝拉', en: 'Lola' },
+      { cn: '山姆', en: 'Sam' },
+      { cn: '曼迪', en: 'Mandy' },
+      { cn: '麦茜', en: 'Maisie' },
+      { cn: '汉克', en: 'Hank' },
+      { cn: '珀尔', en: 'Pearl' },
+      { cn: '拉里和劳里', en: 'Larry & Lawrie' },
+      { cn: '安吉洛', en: 'Angelo' },
+      { cn: '拜瑞', en: 'Berry' },
+      { cn: '谢德', en: 'Shade' },
+      { cn: '谜宝', en: 'Meeple' },
+      { cn: '桩', en: 'Trunk' },
+    ]
+  },
+  {
+    name: '神话', color: '#e04436', count: 40,
+    brawlers: [
+      { cn: '莫提斯', en: 'Mortis' },
+      { cn: '塔拉', en: 'Tara' },
+      { cn: '吉恩', en: 'Gene' },
+      { cn: '麦克斯', en: 'Max' },
+      { cn: 'P先生', en: 'Mr. P' },
+      { cn: '芽芽', en: 'Sprout' },
+      { cn: '拜伦', en: 'Byron' },
+      { cn: '史魁克', en: 'Squeak' },
+      { cn: '小罗', en: 'Lou' },
+      { cn: '拉夫', en: 'Ruffs' },
+      { cn: '巴兹', en: 'Buzz' },
+      { cn: '阿方', en: 'Fang' },
+      { cn: '伊芙', en: 'Eve' },
+      { cn: '珍妮特', en: 'Janet' },
+      { cn: '奥蒂斯', en: 'Otis' },
+      { cn: '巴斯特', en: 'Buster' },
+      { cn: '戈雷', en: 'Gray' },
+      { cn: '阿尔缇', en: 'R-T' },
+      { cn: '薇洛', en: 'Willow' },
+      { cn: '道格', en: 'Doug' },
+      { cn: '查克', en: 'Chuck' },
+      { cn: '查莉', en: 'Charlie' },
+      { cn: '米科', en: 'Mico' },
+      { cn: '麦乐迪', en: 'Melodie' },
+      { cn: '莉莉', en: 'Lily' },
+      { cn: '克兰西', en: 'Clancy' },
+      { cn: '阿萌', en: 'Moe' },
+      { cn: '珠珠', en: 'Juju' },
+      { cn: '奥利', en: 'Ollie' },
+      { cn: '露米', en: 'Lumi' },
+      { cn: '芬克斯', en: 'Finx' },
+      { cn: '载勇', en: 'Jae-Yong' },
+      { cn: '鳄梨', en: 'Alli' },
+      { cn: '蜜娜', en: 'Mina' },
+      { cn: '兹奇', en: 'Ziggy' },
+      { cn: '琪琪', en: 'Gigi' },
+      { cn: '格鲁伊', en: 'Grooey' },
+      { cn: '娜吉亚', en: 'Najia' },
+      { cn: '达米安', en: 'Damian' },
+      { cn: '丝塔诺娃', en: 'Stanova' },
+    ]
+  },
+  {
+    name: '传奇', color: '#f5c842', count: 13,
+    brawlers: [
+      { cn: '斯派克', en: 'Spike' },
+      { cn: '黑鸦', en: 'Crow' },
+      { cn: '里昂', en: 'Leon' },
+      { cn: '沙迪', en: 'Sandy' },
+      { cn: '琥珀', en: 'Amber' },
+      { cn: '梅格', en: 'Meg' },
+      { cn: '瑟奇', en: 'Surge' },
+      { cn: '切斯特', en: 'Chester' },
+      { cn: '科迪琉斯', en: 'Cordelius' },
+      { cn: '凯特', en: 'Kit' },
+      { cn: '德拉科', en: 'Draco' },
+      { cn: '健次', en: 'Kenji' },
+      { cn: '皮尔斯', en: 'Pierce' },
+    ]
+  },
+  {
+    name: '超凡', color: '#ff6b9d', count: 2,
+    brawlers: [
+      { cn: '风姬', en: 'Kaze' },
+      { cn: '西里乌斯', en: 'Sirius' },
+    ]
+  },
+];
+
+// Validate total
+const totalBrawlers = rarities.reduce((s, r) => s + r.brawlers.length, 0);
+console.log('Total brawlers:', totalBrawlers);
+
+// ============================================================
+// WHEEL ENGINE
+// ============================================================
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const size = canvas.width;
+const cx = size / 2, cy = size / 2;
+const radius = size / 2 - 12;
+
+let currentRotation = 0;        // radians
+let spinning = false;
+let stage = 1;                 // 1 = rarity wheel, 2 = brawler wheel
+let selectedRarity = null;     // set after stage 1
+let wheelSegments = [];        // { label, subLabel, color, fraction }
+let history = [];
+
+// Build rarity wheel segments
+function buildRaritySegments() {
+  const total = rarities.reduce((s, r) => s + r.brawlers.length, 0);
+  return rarities.map(r => ({
+    label: r.name,
+    subLabel: `${r.brawlers.length}个`,
+    color: r.color,
+    fraction: r.brawlers.length / total,
+    rarity: r,
+  }));
+}
+
+// Build brawler wheel segments for a given rarity
+function buildBrawlerSegments(rarity) {
+  const list = rarity.brawlers;
+  return list.map(b => ({
+    label: b.cn,
+    subLabel: b.en,
+    color: rarity.color,
+    fraction: 1 / list.length,
+    brawler: b,
+    rarity: rarity,
+  }));
+}
+
+function drawWheel(segments) {
+  ctx.clearRect(0, 0, size, size);
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1a3e';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  let startAngle = currentRotation;
+  segments.forEach(seg => {
+    const sliceAngle = seg.fraction * Math.PI * 2;
+    const endAngle = startAngle + sliceAngle;
+
+    // Draw segment
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    // Segment border
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    const midAngle = startAngle + sliceAngle / 2;
+    const labelRadius = radius * 0.65;
+    const lx = cx + Math.cos(midAngle) * labelRadius;
+    const ly = cy + Math.sin(midAngle) * labelRadius;
+
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.rotate(midAngle + Math.PI / 2);
+
+    // Main label — larger fonts, better sizing
+    const fontSize = segments.length <= 10 ? 18 : segments.length <= 15 ? 15 : segments.length <= 30 ? 14 : 12;
+    ctx.font = `bold ${fontSize}px "Noto Sans SC"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Text outline for clarity
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(seg.label, 0, 0);
+
+    // Text fill
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(seg.label, 0, 0);
+    ctx.shadowBlur = 0;
+
+    // Sub-label
+    if (seg.subLabel && segments.length <= 20) {
+      const subSize = fontSize * 0.65;
+      ctx.font = `${subSize}px "Noto Sans SC"`;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 2.5;
+      ctx.strokeText(seg.subLabel, 0, fontSize * 0.9);
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillText(seg.subLabel, 0, fontSize * 0.9);
+    }
+
+    ctx.restore();
+
+    startAngle = endAngle;
+  });
+
+  // Center circle
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
+  grad.addColorStop(0, '#fff');
+  grad.addColorStop(0.5, '#ffd700');
+  grad.addColorStop(1, '#cc8800');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// Easing function
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function getSelectedSegment(segments) {
+  // Pointer is at the top (angle = -PI/2, i.e., pointing up)
+  // Normalize: we need what's at the top of the wheel
+  const pointerAngle = -Math.PI / 2; // pointing up
+  let angle = ((pointerAngle - currentRotation) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+
+  let cum = 0;
+  for (let i = 0; i < segments.length; i++) {
+    cum += segments[i].fraction * Math.PI * 2;
+    if (angle <= cum) return { segment: segments[i], index: i };
+  }
+  return { segment: segments[0], index: 0 };
+}
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('btnSpin').disabled = true;
+  document.getElementById('resultArea').innerHTML = '';
+
+  const segments = stage === 1 ? buildRaritySegments() : buildBrawlerSegments(selectedRarity);
+  wheelSegments = segments;
+
+  // Random extra rotations: 5 to 10 full turns + random offset
+  const extraTurns = (5 + Math.random() * 5) * Math.PI * 2;
+  const randomOffset = Math.random() * Math.PI * 2;
+  const targetRotation = currentRotation + extraTurns + randomOffset;
+
+  const startRotation = currentRotation;
+  const totalDelta = targetRotation - startRotation;
+  const duration = 4000 + Math.random() * 1500; // 4-5.5 seconds
+  const startTime = performance.now();
+
+  // Shared audio context and tick state
+  let audioCtx = null;
+  let lastTickTime = 0;
+  let lastTickSegment = -1;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTick() {
+    ensureAudio();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 800 + Math.random() * 600;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeOutCubic(progress);
+
+    currentRotation = startRotation + totalDelta * eased;
+    drawWheel(segments);
+
+    // Tick when pointer crosses a segment boundary
+    // Limit: max 1 tick per 25ms to avoid buzz on large wheels
+    const result = getSelectedSegment(segments);
+    if (result.index !== lastTickSegment) {
+      lastTickSegment = result.index;
+      if (now - lastTickTime > 25) {
+        lastTickTime = now;
+        playTick();
+      }
+    }
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Stop spinning, no pending audio
+      onSpinComplete(segments);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function onSpinComplete(segments) {
+  spinning = false;
+  const { segment, index } = getSelectedSegment(segments);
+
+  if (stage === 1) {
+    // Stage 1: rarity selected
+    selectedRarity = segment.rarity;
+    stage = 2;
+
+    // Show result
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-card">
+        <div class="result-rarity">🎯 抽中的稀有度</div>
+        <div class="result-name" style="color:${segment.color}">${segment.label}</div>
+        <div class="result-english">${segment.subLabel} 角色</div>
+        <div style="margin-top:8px;font-size:0.9em;color:#aaa;">请再次点击旋转抽取具体角色 →</div>
+      </div>
+    `;
+
+    // Update UI
+    document.getElementById('stage1Dot').classList.remove('active');
+    document.getElementById('stage1Dot').classList.add('done');
+    document.getElementById('stage2Dot').classList.add('active');
+
+    // Draw the brawler wheel for the selected rarity
+    const brawlerSegs = buildBrawlerSegments(selectedRarity);
+    wheelSegments = brawlerSegs;
+    drawWheel(brawlerSegs);
+
+  } else {
+    // Stage 2: specific brawler selected
+    const brawler = segment.brawler;
+    const rarity = segment.rarity;
+
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-card">
+        <div class="result-rarity">🎉 最终结果</div>
+        <div class="result-name" style="color:${rarity.color}">${brawler.cn}</div>
+        <div class="result-english">${brawler.en} · ${rarity.name}</div>
+      </div>
+    `;
+
+    // Update UI
+    document.getElementById('stage2Dot').classList.remove('active');
+    document.getElementById('stage2Dot').classList.add('done');
+
+    // Add to history
+    history.unshift({ brawler, rarity, time: new Date() });
+    if (history.length > 20) history.pop();
+    renderHistory();
+
+    // Disable spin, keep reset
+    document.getElementById('btnSpin').disabled = true;
+  }
+
+  document.getElementById('btnSpin').disabled = false;
+}
+
+function resetAll() {
+  if (spinning) return;
+  stage = 1;
+  selectedRarity = null;
+  currentRotation = 0;
+  wheelSegments = buildRaritySegments();
+  drawWheel(wheelSegments);
+
+  document.getElementById('stage1Dot').classList.add('active');
+  document.getElementById('stage1Dot').classList.remove('done');
+  document.getElementById('stage2Dot').classList.remove('active', 'done');
+  document.getElementById('resultArea').innerHTML = '';
+  document.getElementById('btnSpin').disabled = false;
+}
+
+function renderHistory() {
+  const area = document.getElementById('historyArea');
+  const list = document.getElementById('historyList');
+  if (history.length === 0) {
+    area.style.display = 'none';
+    return;
+  }
+  area.style.display = 'block';
+  list.innerHTML = history.map((h, i) =>
+    `<span class="history-chip" style="border-left:3px solid ${h.rarity.color}">
+      ${h.brawler.cn} <small style="opacity:0.6">${h.rarity.name}</small>
+    </span>`
+  ).join('');
+}
+
+// Init: draw rarity wheel
+wheelSegments = buildRaritySegments();
+drawWheel(wheelSegments);
+</script>
+</body>
+</html>
