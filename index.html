@@ -185,7 +185,7 @@
 <div class="container">
   <div class="header">
     <h1>Brawl Stars 角色转盘</h1>
-    <p class="subtitle">102 个角色 · 先抽稀有度，再抽角色</p>
+    <p class="subtitle"><span id="totalCount">107</span> 个角色 · 先抽稀有度，再抽角色</p>
   </div>
 
   <div class="stage-indicator">
@@ -253,7 +253,7 @@ const rarities = [
     ]
   },
   {
-    name: '史诗', color: '#b146c2', count: 29,
+    name: '史诗', color: '#b146c2', count: 30,
     brawlers: [
       { cn: '阿渤', en: 'Bo' },
       { cn: '艾魅', en: 'Emz' },
@@ -284,10 +284,11 @@ const rarities = [
       { cn: '谢德', en: 'Shade' },
       { cn: '谜宝', en: 'Meeple' },
       { cn: '桩', en: 'Trunk' },
+      { cn: '博尔特', en: 'Bolt' },
     ]
   },
   {
-    name: '神话', color: '#e04436', count: 40,
+    name: '神话', color: '#e04436', count: 42,
     brawlers: [
       { cn: '莫提斯', en: 'Mortis' },
       { cn: '塔拉', en: 'Tara' },
@@ -328,11 +329,13 @@ const rarities = [
       { cn: '格鲁伊', en: 'Grooey' },
       { cn: '娜吉亚', en: 'Najia' },
       { cn: '达米安', en: 'Damian' },
-      { cn: '丝塔诺娃', en: 'Stanova' },
+      { cn: '丝塔诺娃', en: 'Starr Nova' },
+      { cn: '温蒂', en: 'Wendy' },
+      { cn: '科斯莫', en: 'Cosmo' },
     ]
   },
   {
-    name: '传奇', color: '#f5c842', count: 13,
+    name: '传奇', color: '#f5c842', count: 14,
     brawlers: [
       { cn: '斯派克', en: 'Spike' },
       { cn: '黑鸦', en: 'Crow' },
@@ -347,6 +350,7 @@ const rarities = [
       { cn: '德拉科', en: 'Draco' },
       { cn: '健次', en: 'Kenji' },
       { cn: '皮尔斯', en: 'Pierce' },
+      { cn: '阿宪', en: 'Nori' },
     ]
   },
   {
@@ -361,6 +365,7 @@ const rarities = [
 // Validate total
 const totalBrawlers = rarities.reduce((s, r) => s + r.brawlers.length, 0);
 console.log('Total brawlers:', totalBrawlers);
+document.getElementById('totalCount').textContent = totalBrawlers;
 
 // ============================================================
 // WHEEL ENGINE
